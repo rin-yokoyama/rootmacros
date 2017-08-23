@@ -1,4 +1,4 @@
-#include "IsoAna.h"
+#include "IsoAna/IsoAna.h"
 
 IsoAna::IsoAna(TH2F* ETin){
   fETmat = ETin;
@@ -36,7 +36,7 @@ void IsoAna::Init(void) {
 // Draw markers on the current histogram.
 void IsoAna::dmk(void){
   if(fHistArray->IsEmpty()){
-    cout << "No TH1 has been created." << endl;
+    std::cout << "No TH1 has been created." << std::endl;
     return;
   }
   else{
@@ -52,10 +52,10 @@ void IsoAna::dmk(void){
 
 // Show positions of markers.
 void IsoAna::mkc(void) const {
-  cout << "X\tY" << endl;
+  std::cout << "X\tY" << std::endl;
   TIter marker_next( fMarkerArray );
   while( TMarker *marker = (TMarker*)marker_next() ){
-    cout << marker->GetX() << "\t" << marker->GetY() << endl;
+    std::cout << marker->GetX() << "\t" << marker->GetY() << std::endl;
   }
 }
 
@@ -80,8 +80,8 @@ void IsoAna::setct(Double_t ctlow, Double_t ctup){
     ctup = ((TMarker*)fMarkerArray->At(kNMarkers-1))->GetX();
   }
   fComptonRangeArray->Add(new Range(ctlow,ctup));
-  cout << "The following range has been added as a Compton part:" << endl;
-  cout << ctlow << "\t" << ctup << endl;
+  std::cout << "The following range has been added as a Compton part:" << std::endl;
+  std::cout << ctlow << "\t" << ctup << std::endl;
   return;
 }
 
@@ -92,17 +92,16 @@ void IsoAna::setpk(Double_t pklow, Double_t pkup){
     pkup = ((TMarker*)fMarkerArray->At(kNMarkers-1))->GetX();
   }
   fPeakRangeArray->Add(new Range(pklow,pkup));
-  cout << "The following range has been added as a peak:" << endl;
-  cout << pklow << "\t" << pkup << endl;
+  std::cout << "The following range has been added as a peak:" << std::endl;
+  std::cout << pklow << "\t" << pkup << std::endl;
   return;
 }
 
 // Make a projection on to the energy axis.
 TH1D* IsoAna::prE(Double_t tlow, Double_t tup){
-  ostringstream oss;
-  oss.str("");
+  ostringstream oss("");
   oss << "hist" << fHistArray->GetLast()+1;
-  cout << oss.str() <<"has been created." << endl;
+  std::cout << oss.str() <<"has been created." << std::endl;
   fHist = (TH1D*)fETmat->ProjectionX(
       oss.str().c_str(),
       fETmat->GetYaxis()->FindBin(tlow),
@@ -116,15 +115,15 @@ TH1D* IsoAna::prE(Double_t tlow, Double_t tup){
 
 // Make a projection on to time axis.
 TH1D* IsoAna::prT(void){
-  TH1D* h_tmp;
+  TH1D* h_tmp = NULL;
   if( fPeakRangeArray->GetLast()<0 ){
-    cout << "please set the ranges of peaks ahead." << endl;
+    std::cout << "please set the ranges of peaks ahead." << std::endl;
+    return NULL;
   }
   else{
-    ostringstream oss;
-    oss.str("");
+    ostringstream oss("");
     oss << "hist" << fHistArray->GetLast()+1;
-    cout << oss.str() <<"has been created." << endl;
+    std::cout << oss.str() <<"has been created." << std::endl;
     vector<Double_t> errors;
     {
       TIter peak_next( fPeakRangeArray );
@@ -156,7 +155,7 @@ TH1D* IsoAna::prT(void){
       while( Range* peak = (Range*)peak_next() )
 	coef += peak->GetWidth();
       coef = -1.0*coef / ( compton->GetWidth() );
-      cout << coef << endl;
+      std::cout << coef << std::endl;
       TH1D *prtmp = (TH1D*)fETmat->ProjectionY("tmp",fHist->FindBin(compton->GetMin()),fHist->FindBin(compton->GetMax()));
       h_tmp->Add( prtmp, coef);   
       Int_t i = 0;
@@ -167,7 +166,7 @@ TH1D* IsoAna::prT(void){
         ++i;
       }      
     }
-    for(int i=0; i<errors.size(); ++i){
+    for(unsigned int i=0; i<errors.size(); ++i){
       h_tmp->SetBinError(i,errors[i]);
     }
   }
@@ -186,13 +185,12 @@ TH1D* IsoAna::prT(void){
 // Otherwise, skewedness and a step background will be included.
 void IsoAna::nfE(Int_t fixp){
   if(!fHist){
-    cout << "No TH1 has been created." << endl;
+    std::cout << "No TH1 has been created." << std::endl;
     return;
   }
-  ostringstream oss;
-  oss.str("");
+  ostringstream oss("");
   oss << "fit" << fFitArray->GetLast()+1;
-  cout << oss.str() << "has been created." << endl;
+  std::cout << oss.str() << "has been created." << std::endl;
   Double_t rangemin = fETmat->GetXaxis()->GetXmin();
   Double_t rangemax = fETmat->GetXaxis()->GetXmax();
   fFit = new TF1(oss.str().c_str(),"pol2(0) + [6]*gaus(3)/([5]*sqrt(2*TMath::Pi())) + (1-[6])*[3]*exp((x-[4])/[7])*TMath::Erfc((x-[4])/(sqrt(2)*[5]) + [5]/(sqrt(2)*[7])) + [3]*[8]*TMath::Erfc((x-[4])/(sqrt(2)*[5]))",rangemin, rangemax);
@@ -221,13 +219,12 @@ void IsoAna::nfE(Int_t fixp){
 // New fit with a function decay + constant
 void IsoAna::nfT(Int_t fixp, Option_t *op, Double_t p1){
   if(!fHist){
-    cout << "No TH1 has been created." << endl;
+    std::cout << "No TH1 has been created." << std::endl;
     return;
   }
-  ostringstream oss;
-  oss.str("");
+  ostringstream oss("");
   oss << "fit" << fFitArray->GetLast()+1;
-  cout << oss.str() << "has been created." << endl;
+  std::cout << oss.str() << "has been created." << std::endl;
   Double_t rangemin = fETmat->GetXaxis()->GetXmin();
   Double_t rangemax = fETmat->GetXaxis()->GetXmax();
   fFit = new TF1(oss.str().c_str(),"[0]*pow(0.5, x/[1]) + [2]",rangemin,rangemax);

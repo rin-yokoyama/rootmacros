@@ -1,6 +1,13 @@
+#ifndef ISOANA_H
+#define ISOANA_H
+
+#include <iostream>
+#include <sstream>
 #include <vector>
+#include <TStyle.h>
 #include <TH1.h>
 #include <TH2.h>
+#include <TF1.h>
 #include <TMarker.h>
 #include <TCanvas.h>
 #include <TObjArray.h>
@@ -57,3 +64,5 @@ protected:
   void Init(void);
 
 };
+
+#endif
