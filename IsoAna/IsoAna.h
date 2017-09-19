@@ -42,8 +42,13 @@ private:
 
   Color_t hl_col, hf_col;
   TObjArray *fMarkerArray;
+  Int_t fNMarkerSet;
 
   static const int kNMarkers = 3;
+
+  Int_t fNextFixp;
+  Option_t *fNextOp;
+  Double_t fNextP1;
 
 public:
   TCanvas *canv;
@@ -57,8 +62,9 @@ public:
   void setct(Double_t pklow = 0, Double_t pkup = 0);
   TH1D* prE(Double_t tlow = 0, Double_t tup = 0);
   TH1D* prT();
-  void nfE(Int_t fixp = 1);
+  void nfE(Int_t fixp = 1, Option_t *op="");
   void nfT(Int_t fixp = 1, Option_t *op = "", Double_t p1 = 500);
+  void SetMarker(Int_t event,Int_t px,Int_t py,TObject* sel);
 
 protected:
   void Init(void);

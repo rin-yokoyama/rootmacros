@@ -20,6 +20,7 @@ void IsoAna::Init(void) {
     marker->SetMarkerColor(i+2);
     fMarkerArray->Add(marker);
   }
+  fNMarkerSet = 0;
   fFitBaseLine = new TF1("base","pol0(0)",0,30000);
   fFitBaseLine->SetLineColor(4);
   fFitBaseLine->SetLineStyle(3);
@@ -29,6 +30,9 @@ void IsoAna::Init(void) {
   fFitArray = new TObjArray();
   fPeakRangeArray = new TObjArray();
   fComptonRangeArray = new TObjArray();
+  fNextFixp = 0;
+  fNextOp = "";
+  fNextP1 = 0;
 
   return;
 }
@@ -180,14 +184,44 @@ TH1D* IsoAna::prT(void){
   return fHist;
 }
 
+void IsoAna::SetMarker(Int_t event, Int_t px, Int_t py, TObject *sel)
+{
+   TCanvas *c = (TCanvas *) gTQSender;
+   TPad *pad = (TPad *) c->GetSelectedPad();
+   if (event == kButton1Down) {
+      canv->Disconnect();
+      Float_t x = pad->AbsPixeltoX(px);
+      Float_t y = pad->AbsPixeltoY(py);
+      x = pad->PadtoX(x);
+      y = pad->PadtoY(y);
+      ((TMarker*)fMarkerArray->At(fNMarkerSet))->SetX(x);
+      ((TMarker*)fMarkerArray->At(fNMarkerSet))->SetY(y);
+      ((TMarker*)fMarkerArray->At(fNMarkerSet))->SetMarkerColor(fNMarkerSet+2);
+      ((TMarker*)fMarkerArray->At(fNMarkerSet))->Draw("");
+      fNMarkerSet++;
+      nfE(fNextFixp,fNextOp);
+   }
+   return;
+}
+
 // New fit for a gamma-ray energy peak.
 // If fixp is 0, it will fit by a function Gaussian + line.
 // Otherwise, skewedness and a step background will be included.
-void IsoAna::nfE(Int_t fixp){
+void IsoAna::nfE(Int_t fixp, Option_t *op){
   if(!fHist){
     std::cout << "No TH1 has been created." << std::endl;
     return;
   }
+
+  fNextFixp = fixp;
+  fNextOp = op;
+
+  if(fNMarkerSet<3){
+    canv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)", "IsoAna", this, "SetMarker(Int_t, Int_t, Int_t, TObject*)");
+    std::cout << "Set marker " << fNMarkerSet << " for fit by clicking on the histogram." << std::endl;
+    return;
+  }
+  
   ostringstream oss("");
   oss << "fit" << fFitArray->GetLast()+1;
   std::cout << oss.str() << "has been created." << std::endl;
@@ -197,8 +231,8 @@ void IsoAna::nfE(Int_t fixp){
   fFitArray->Add(fFit);
   fFit->SetParNames("bg0", "bg1", "bg2", "area", "center", "sigma", "R", "beta", "step");
   fFit->SetParameters( 10, -0.01, 0,
-    ((TMarker*)fMarkerArray->At(kNMarkers-3))->GetY(),
-    ((TMarker*)fMarkerArray->At(kNMarkers-3))->GetX(), 1.0, 0, 5, 0);
+    ((TMarker*)fMarkerArray->At(kNMarkers-1))->GetY(),
+    ((TMarker*)fMarkerArray->At(kNMarkers-1))->GetX(), 1.0, 0, 5, 0);
   fFit->SetParLimits( 5, 0, 1000);
   fFit->SetLineWidth(1);
   fFit->SetLineColor(2);
@@ -210,9 +244,10 @@ void IsoAna::nfE(Int_t fixp){
     fFit->FixParameter(7,1);
     fFit->FixParameter(8,0);
   }
-  fHist->Fit(fFit,"","",
-    ((TMarker*)fMarkerArray->At(kNMarkers-2))->GetX(),
-    ((TMarker*)fMarkerArray->At(kNMarkers-1))->GetX());
+  fHist->Fit(fFit,op,"",
+    ((TMarker*)fMarkerArray->At(kNMarkers-3))->GetX(),
+    ((TMarker*)fMarkerArray->At(kNMarkers-2))->GetX());
+  fNMarkerSet = 0;
   return;
 }
 
@@ -222,6 +257,17 @@ void IsoAna::nfT(Int_t fixp, Option_t *op, Double_t p1){
     std::cout << "No TH1 has been created." << std::endl;
     return;
   }
+
+  fNextFixp = fixp;
+  fNextOp = op;
+  fNextP1 = p1;
+
+  if(fNMarkerSet<2){
+    canv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)", "IsoAna", this, "SetMarker(Int_t, Int_t, Int_t, TObject*)");
+    std::cout << "Set marker " << fNMarkerSet << " for fit by clicking on the histogram." << std::endl;
+    return;
+  }
+  
   ostringstream oss("");
   oss << "fit" << fFitArray->GetLast()+1;
   std::cout << oss.str() << "has been created." << std::endl;
@@ -245,6 +291,7 @@ void IsoAna::nfT(Int_t fixp, Option_t *op, Double_t p1){
     fFitBaseLine->SetParameter(0,fFit->GetParameter(2));
     fFitBaseLine->Draw("same");
   }
+  fNMarkerSet = 0;
   return;
 }
 
