@@ -199,7 +199,10 @@ void IsoAna::SetMarker(Int_t event, Int_t px, Int_t py, TObject *sel)
       ((TMarker*)fMarkerArray->At(fNMarkerSet))->SetMarkerColor(fNMarkerSet+2);
       ((TMarker*)fMarkerArray->At(fNMarkerSet))->Draw("");
       fNMarkerSet++;
-      nfE(fNextFixp,fNextOp);
+      if(fFitType == "E")
+         nfE(fNextFixp,fNextOp);
+      if(fFitType == "T")
+         nfT(fNextFixp,fNextOp,fNextP1);
    }
    return;
 }
@@ -217,6 +220,7 @@ void IsoAna::nfE(Int_t fixp, Option_t *op){
   fNextOp = op;
 
   if(fNMarkerSet<3){
+    fFitType = "E";
     canv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)", "IsoAna", this, "SetMarker(Int_t, Int_t, Int_t, TObject*)");
     std::cout << "Set marker " << fNMarkerSet << " for fit by clicking on the histogram." << std::endl;
     return;
@@ -263,6 +267,7 @@ void IsoAna::nfT(Int_t fixp, Option_t *op, Double_t p1){
   fNextP1 = p1;
 
   if(fNMarkerSet<2){
+    fFitType = "T";
     canv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)", "IsoAna", this, "SetMarker(Int_t, Int_t, Int_t, TObject*)");
     std::cout << "Set marker " << fNMarkerSet << " for fit by clicking on the histogram." << std::endl;
     return;
@@ -273,7 +278,7 @@ void IsoAna::nfT(Int_t fixp, Option_t *op, Double_t p1){
   std::cout << oss.str() << "has been created." << std::endl;
   Double_t rangemin = fETmat->GetXaxis()->GetXmin();
   Double_t rangemax = fETmat->GetXaxis()->GetXmax();
-  fFit = new TF1(oss.str().c_str(),"[0]*pow(0.5, x/[1]) + [2]",rangemin,rangemax);
+  fFit = new TF1(oss.str().c_str(),"[0]*TMath::Power(2., -x/[1]) + [2]",rangemin,rangemax);
   fFitArray->Add(fFit);
   fFit->SetParNames("I0", "T1/2", "base line");
   fFit->SetParameters( 100, p1, 0 );
@@ -285,8 +290,8 @@ void IsoAna::nfT(Int_t fixp, Option_t *op, Double_t p1){
     fFit->FixParameter(2,0);
   }
   fHist->Fit(fFit,op,"",
-    ((TMarker*)fMarkerArray->At(kNMarkers-2))->GetX(),
-    ((TMarker*)fMarkerArray->At(kNMarkers-1))->GetX());
+    ((TMarker*)fMarkerArray->At(0))->GetX(),
+    ((TMarker*)fMarkerArray->At(1))->GetX());
   if(!fixp){
     fFitBaseLine->SetParameter(0,fFit->GetParameter(2));
     fFitBaseLine->Draw("same");

@@ -20,7 +20,7 @@ private:
 
 public:
   Range(Double_t min, Double_t max){ Set(min,max); }
-  ~Range(){}
+  virtual ~Range(){}
   void Set(Double_t min, Double_t max){ fMin=min; fMax=max; }
   Double_t GetMin() const {return fMin;}
   Double_t GetMax() const {return fMax;}
@@ -49,11 +49,12 @@ private:
   Int_t fNextFixp;
   Option_t *fNextOp;
   Double_t fNextP1;
+  std::string fFitType;
 
 public:
   TCanvas *canv;
   IsoAna( TH2F* ETin );
-  ~IsoAna(void);
+  virtual ~IsoAna(void);
   void dmk(void);
   void mkc(void) const;
   void draw() const;
