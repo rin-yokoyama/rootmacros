@@ -30,6 +30,7 @@ public:
   void Slot(Int_t event, Int_t x, Int_t y, TObject* selected);
   void LoadTextFile(string fname);
   void Draw();
+  void RemoveLast();
   void WriteTextFile(string fname);
 
 protected:
@@ -65,7 +66,8 @@ void Markers::LoadTextFile(string fname){
 void Markers::Draw() {
   TIter next(array);
   while( TMarker* mk = (TMarker*)next() ){
-    mk->Draw("same");
+    if(mk)
+      mk->Draw("same");
   }
   return;
 }
@@ -92,9 +94,17 @@ void Markers::WriteTextFile(string fname) {
   ofstream ofile(fname);
   TIter next(array);
   while( TMarker* mk = (TMarker*) next() ){
-    ofile << mk->GetX() << " " << mk->GetY() << endl;
+    if(mk)
+      ofile << mk->GetX() << " " << mk->GetY() << endl;
   }
   ofile.close();
+}
+
+void Markers::RemoveLast(){
+  delete array->At(array->GetLast());
+  array->RemoveAt(array->GetLast());
+  Draw();
+  return;
 }
 
 Markers* mk;
