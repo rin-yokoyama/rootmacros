@@ -54,7 +54,7 @@ class Gf3ROOT
   void zoom(Double_t low, Double_t up); //zoom all histograms
   void unzoom(); //unzoom all histograms
   void Fit(Int_t event,Int_t px,Int_t py,TObject* sel); //Fit
-  void WriteCSV(string ofname, Int_t fidlow = 0, Int_t fidup = NF_MAX) const; //writes fitting parameters into a csv file.
+  void WriteCSV(string ofname, Int_t fidlow = 0, Int_t fidup = -1) const; //writes fitting parameters into a csv file.
 //  void RoughCalib(string ofname); //2 peak calibration
   void PrintAll(string ps_file); //prints all histograms as a ps file
   void ListMkPos(void) const; //lists x, y value of fTMarker[0]
