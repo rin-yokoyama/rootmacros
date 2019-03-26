@@ -14,13 +14,14 @@
 class GPeakFit : public GPeakFitBase
 {
  protected:
+  static const int kNPAR = 3;
   TF1* fTF1BG; //TF1 for drawing background.
   TObjArray* fMarkerArray;
 
-  TF1* ConstTF1(string f_name, Int_t npk = 1, Double_t xmin = 0, Double_t xmax = 10000); //over rides fitting function with gf3-like function
+  TF1* ConstTF1(string f_name, Int_t npk = 1, Double_t xmin = 0, Double_t xmax = -1); //over rides fitting function with gf3-like function
   Double_t fERes; //energy resolution in sigma (0.001 in default)
-  Int_t fFixPar[6*NP_MAX+3];
-  Double_t fFixParVal[6*NP_MAX+3];
+  Int_t fFixPar[kNPAR*NP_MAX+3];
+  Double_t fFixParVal[kNPAR*NP_MAX+3];
 
  public:
   GPeakSearch* fGPeakSearch;
@@ -36,6 +37,8 @@ class GPeakFit : public GPeakFitBase
   void MkFit(Option_t* op,Option_t* gop); //peak fit for marker positions
   Double_t GetMkX(Int_t mkn) const; //returns x value of fTMarker
   TObjArray* GetArray() const { return fMarkerArray; }
+  void SetERes(const Double_t &resolution){ fERes = resolution; }
+  Double_t GetERes(void) const { return fERes; }
 };
 
 #endif

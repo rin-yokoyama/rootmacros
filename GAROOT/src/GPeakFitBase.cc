@@ -11,6 +11,10 @@ GPeakFitBase::~GPeakFitBase(void){}
 
 TF1* GPeakFitBase::ConstTF1(string f_name, Int_t pkn, Double_t xmin, Double_t xmax)
 {
+  if(xmax<0){
+    xmin = GetXaxis()->GetBinCenter(0);
+    xmax = GetXaxis()->GetBinCenter(GetNbinsX());
+  }
   std::cout << "[GPeakFitBase::ConstTF1()]: Constructing new TF1 named " << f_name << std::endl;
   TF1* func;
   //construction of TF1

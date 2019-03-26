@@ -3,7 +3,7 @@
 GPeakFit::GPeakFit(TH1F* hist) : GPeakFitBase(hist)
 {
   fERes = E_RES;
-  for(int i=0; i<6*NP_MAX+3; i++){
+  for(int i=0; i<kNPAR*NP_MAX+3; i++){
     fFixPar[i] = 0;
     fFixParVal[i] = 0.0;
   }
@@ -15,6 +15,10 @@ GPeakFit::~GPeakFit(void){}
 
 TF1* GPeakFit::ConstTF1(string f_name, Int_t npk, Double_t xmin, Double_t xmax)
 {
+  if(xmax<0){
+    xmin = GetXaxis()->GetBinCenter(0);
+    xmax = GetXaxis()->GetBinCenter(GetNbinsX());
+  }
   TF1* func;
   ostringstream f_expr, f_parname;
   // creating function expression
@@ -25,37 +29,37 @@ TF1* GPeakFit::ConstTF1(string f_name, Int_t npk, Double_t xmin, Double_t xmax)
   f_expr.str("");
   f_expr << "pol2(0)";
   for(int i=0; i<npk; i++){
-    int j = 6*i;
-    f_expr << "+[" << j+6 << "]*[" << 6*npk+3 << "]*gaus(" << j+3 << ")/([" << j+5 << "]*sqrt(2*TMath::Pi()))+(1-[" << j+6 << "])*[" << j+3 << "]*[" << 6*npk+3 << "]*exp((x-[" << j+4 << "])/[" << j+7 << "])*TMath::Erfc((x-[" << j+4 << "])/(sqrt(2)*[" << j+5 << "])+[" << j+5 << "]/(sqrt(2)*[" << j+7 << "]))+[" << j+3 << "]*[" << 6*npk+3 << "]*[" << j+8 << "]*TMath::Erfc((x-[" << j+4 << "])/(sqrt(2)*[" << j+5 << "]))";
+    int j = kNPAR*i;
+    f_expr << "+[" << kNPAR*npk+3 << "]*gaus(" << j+3 << ")/([" << j+5 << "]*sqrt(2*TMath::Pi()))";
   }
 
   //construction of TF1
   func = new TF1(f_name.c_str(), f_expr.str().c_str(), xmin, xmax);
+  func->SetNpx(1000);
   //*func = gGFitLine;
 
   //setting parameter names
-  for(int i=0; i<3; i++){
+  for(int i=0; i<kNPAR; i++){
     f_parname.str("");
     f_parname << "BG" << i;
     func->SetParName(i, f_parname.str().c_str());
   }
-  string parstr[6] = {"area","center","sigma","R","beta","step"};
+  string parstr[kNPAR] = {"area","center","sigma"};
   for(int i=0; i<npk; i++){
-    for(int j=0; j<6; j++){
+    for(int j=0; j<kNPAR; j++){
       f_parname.str("");
       f_parname << parstr[j] << i;
-      func->SetParName(6*i+j+3, f_parname.str().c_str());
+      func->SetParName(kNPAR*i+j+3, f_parname.str().c_str());
     }
-    //func->SetParLimits(6*i+3, 0, 10000000000);
-    //func->SetParLimits(6*i+5, 0, 1000000);
   }
-  func->SetParName(6*npk+3, "gain");
+  func->SetParName(kNPAR*npk+3, "gain");
 
   //initialization of the parameters
-  for(int i=0; i<npk*6+4; i++)
+  for(int i=0; i<npk*kNPAR+4; i++)
     func->SetParameter(i,1.0);
  
   const int idc = fTF1Array->IndexOf(fTF1Curr);
+  cout << "[GPeakFit::ConstTF1()]: constructed new function " << f_name << " at fTF1[" << idc << "]" << endl;
   fTF1Array->RemoveAt(idc);
   fTF1Array->AddAt(func,idc);
 
@@ -71,11 +75,11 @@ void GPeakFit::ClearTF1(Int_t fitn)
 
 void GPeakFit::FixParams(string pf_name)
 {
-  Int_t npk = (fTF1Curr->GetNpar() - 3)/6;
+  Int_t npk = (fTF1Curr->GetNpar() - 3)/kNPAR;
   ifstream fin(AppendMacroPath(pf_name).c_str(), ios::in);
   cout << "[GPeakFit::FixParams()]: open fixpar file: " << AppendMacroPath(pf_name).c_str() << endl;
   if(!fin){ cout << "[GPeakFit::FixParams()]: cannot open fixpar file." << endl; return; }
-  for(int i=0; i<6*npk+3; i++){
+  for(int i=0; i<kNPAR*npk+3; i++){
     fin >> fFixPar[i];
     fin >> fFixParVal[i];
     if(fin.eof()){
@@ -85,11 +89,11 @@ void GPeakFit::FixParams(string pf_name)
     }
   }
   fin.close();
-  for(int i=0; i<6*npk+3; i++){
+  for(int i=0; i<kNPAR*npk+3; i++){
     if(fFixPar[i])
       fTF1Curr->FixParameter(i, fFixParVal[i]);
   }
-  fTF1Curr->FixParameter(6*npk+3, GetBinWidth(0));
+  fTF1Curr->FixParameter(kNPAR*npk+3, GetBinWidth(0));
 }
 
 void GPeakFit::SetFitting(Int_t npk, const TObjArray *mk_array, Int_t fitn )
@@ -102,25 +106,43 @@ void GPeakFit::SetFitting(Int_t npk, const TObjArray *mk_array, Int_t fitn )
   mkpos[0][1] = ((TMarker*)mk_array->At(1))->GetX();
   mkpos[1][1] = ((TMarker*)mk_array->At(1))->GetY();
   fTF1Curr = GPeakFit::ConstTF1(fname, npk, mkpos[0][0], mkpos[0][1]);
-  fTF1Curr->SetParameter(0,(mkpos[1][0]*mkpos[0][1] - mkpos[1][1]*mkpos[0][0])/(mkpos[0][1]-mkpos[0][0]));
-  fTF1Curr->SetParameter(1, (mkpos[1][1]-mkpos[1][0])/(mkpos[0][1]-mkpos[0][0]));
+  const Double_t p0 = (mkpos[1][0]*mkpos[0][1] - mkpos[1][1]*mkpos[0][0])/(mkpos[0][1]-mkpos[0][0]);
+  const Double_t p1 = (mkpos[1][1]-mkpos[1][0])/(mkpos[0][1]-mkpos[0][0]);
+  fTF1Curr->SetParameter(0, p0);
+  fTF1Curr->SetParameter(1, p1);
   fTF1Curr->SetParameter(2, 0.0);
+
+  const Int_t bin_first = GetXaxis()->FindBin(mkpos[0][0]);
+  const Int_t bin_last = GetXaxis()->FindBin(mkpos[0][1]);
+  Double_t area = Integral(bin_first,bin_last)*GetBinWidth(0);
+  area = area + (p0 + p1*mkpos[0][0])*mkpos[0][0] - (p0 + p1*mkpos[0][1])*mkpos[0][1];
+  const Double_t avg_count = area/GetBinWidth(0);
+  Double_t fwhm = 0;
+  for(int i=bin_first; i<bin_last; i++){
+    if(GetBinContent(i)>avg_count+p0+p1*GetBinCenter(i))
+       fwhm++;
+  }
+  fwhm = fwhm * GetBinWidth(0);
+  Double_t peak_height_sum = 0;
+  for(int i=0; i<mk_array->GetEntries()-2; i++){
+    peak_height_sum += ((TMarker*)mk_array->At(i+2))->GetY();
+  }
+
   for(int i=0; i<mk_array->GetEntries()-2; i++){
     Double_t mkposi[2] = {((TMarker*)mk_array->At(i+2))->GetX(),((TMarker*)mk_array->At(i+2))->GetY()}; 
-    fTF1Curr->SetParameter(6*i+3, mkposi[1] * 
-       	(
-       	sqrt(2*3.1415926535)*( mkposi[0] * fERes + E_RES_MIN)
-       	/GetBinWidth(0)
-       	)
-       	);
-    fTF1Curr->SetParLimits(6*i+3, 0, 1E+10); 
-    fTF1Curr->SetParameter(6*i+4, mkposi[0]);
-    fTF1Curr->SetParLimits(6*i+4, mkpos[0][0], mkpos[0][1]);
-    fTF1Curr->SetParameter(6*i+5, mkposi[0]*fERes+E_RES_MIN);
-    fTF1Curr->SetParLimits(6*i+5, 0, mkposi[0]);
-    fTF1Curr->SetParameter(6*i+6, 0.9);
-    fTF1Curr->SetParameter(6*i+7, 0.5);
-    fTF1Curr->SetParameter(6*i+8, 0.01);
+    //fTF1Curr->SetParameter(kNPAR*i+3, mkposi[1] * 
+    //   	(
+    //   	sqrt(2*3.1415926535)*( mkposi[0] * fERes + E_RES_MIN)
+    //   	/GetBinWidth(0)
+    //   	)
+    //   	);
+    fTF1Curr->SetParameter(kNPAR*i+3, mkposi[1]/peak_height_sum*area);
+    fTF1Curr->SetParLimits(kNPAR*i+3, 0, 1E+3*fTF1Curr->GetParameter(6*i+3)); 
+    fTF1Curr->SetParameter(kNPAR*i+4, mkposi[0]);
+    fTF1Curr->SetParLimits(kNPAR*i+4, mkpos[0][0], mkpos[0][1]);
+    fTF1Curr->SetParameter(kNPAR*i+5, mkposi[0]*fERes+E_RES_MIN);
+    //fTF1Curr->SetParameter(kNPAR*i+5, fwhm/2.35);
+    fTF1Curr->SetParLimits(kNPAR*i+5, 0, mkpos[0][1]-mkpos[0][0]);
   }
   FixParams();
 }
@@ -130,17 +152,13 @@ void GPeakFit::Draw(Option_t* option)
   TH1::Draw(option);
   TIter fit_next( fTF1Array );
   while( TF1* fit = (TF1*)fit_next() ){
-    if(fit->GetChisquare()!=0){
+    if(fit->GetChisquare()>0){
       fit->Draw("same");
       // Drawing BG curves.
-      Int_t npk = (fTF1Curr->GetNpar() - 3)/6;
+      Int_t npk = (fTF1Curr->GetNpar() - 3)/kNPAR;
       ostringstream bg_expr;
       bg_expr.str("");
       bg_expr << "pol2(0)";
-      for(int i=0; i<npk; i++){
-        int j = 4*i;
-        bg_expr << "+[" << j+3 << "]*[" << 4*npk+3 << "]*[" << j+6 << "]*TMath::Erfc((x-[" << j+4 << "])/(sqrt(2)*[" << j+5 << "]))";
-      }
       string bgname = GetName();
       bgname.append("_bg");
       fTF1BG = new TF1(bgname.c_str(), bg_expr.str().c_str(), fTF1Curr->GetXmin(), fTF1Curr->GetXmax());
@@ -149,15 +167,6 @@ void GPeakFit::Draw(Option_t* option)
       fTF1BG->SetParameter(0, fTF1Curr->GetParameter(0));
       fTF1BG->SetParameter(1, fTF1Curr->GetParameter(1));
       fTF1BG->SetParameter(2, fTF1Curr->GetParameter(2));
-      for(int i=0; i<npk; i++){
-        int j=6*i;
-        int k=4*i;
-        fTF1BG->SetParameter(k+3, fTF1Curr->GetParameter(j+3));
-        fTF1BG->SetParameter(k+4, fTF1Curr->GetParameter(j+4));
-        fTF1BG->SetParameter(k+5, fTF1Curr->GetParameter(j+5));
-        fTF1BG->SetParameter(k+6, fTF1Curr->GetParameter(j+8));
-      }
-      fTF1BG->SetParameter(4*npk+3, fTF1Curr->GetParameter(6*npk+3));
       fTF1BG->Draw("same");
     }
   }

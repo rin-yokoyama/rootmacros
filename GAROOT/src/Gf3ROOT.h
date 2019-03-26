@@ -62,6 +62,9 @@ class Gf3ROOT
   void FileFit(string ffname = "GfROOTfits.root",string option=""); //fits all histograms by TF1s in the file
   void QFit(Int_t event,Int_t px,Int_t py,TObject* sel); //QuickFit
   void Expand(Double_t x);
+  void SetEResAll(const Double_t &resolution){TIter next(fGPeakFitArray); while(GPeakFit* obj = (GPeakFit*)next()){obj->SetERes(resolution);}}
+  void SetEResCurrent(const Double_t &resolution){fGPeakFitCurr->SetERes(resolution);}
+  void ListERes() const {TIter next(fGPeakFitArray); while(GPeakFit* obj = (GPeakFit*)next()){std::cout << obj->GetName() << ": " << obj->GetERes() << std::endl;}}
 };
 
 #endif
